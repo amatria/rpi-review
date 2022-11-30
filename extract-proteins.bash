@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-INPUT=npinter-v5.txt
+INPUT=my-npinter-v5.txt
 PROTEIN_OUTPUT=protein.fa
 INTERACTS_OUTPUT=protein-interacts.txt
 
@@ -15,6 +15,46 @@ TMP_FILE=tmp_file.txt
 declare -A RNAS
 declare -A PROTEINS
 
+find_protein_id () {
+    PROTID=$1
+    ORGANISM=$2
+
+    if [ "${PROTID}" == "-" ]
+    then
+        echo "Skipping protein with ID: -"
+        return 1
+    fi
+
+    curl -s -H "Accept: text/plain; format=tsv" "https://rest.uniprot.org/uniprotkb/search?query=${PROTID}" --output $TMP_FILE
+
+    NUM_LINES=`wc -l ${TMP_FILE} | awk '{print $1}'`
+    if [ ${NUM_LINES} -gt 1 ]
+    then
+        FOUND=0
+        while IFS= read -r LINE
+        do
+            IFS=$'\t' read -r -a WWORDS <<< "$LINE"
+            TMP_ORGANISM="${WWORDS[5]}"
+            if grep -q "${ORGANISM}" <<< $TMP_ORGANISM; then
+                PROTID="${WWORDS[0]}"
+                FOUND=1
+                break
+            fi
+        done < $TMP_FILE
+
+        if [ $FOUND -eq 0 ]
+        then
+            echo "Cannot find protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}"
+            return 1
+        fi
+    else
+        echo "Cannot find protein with ID: ${PROTID}"
+        return 1
+    fi
+
+    return 0
+}
+
 # find valid lncRNA-protein pairs
 while IFS= read -r LINE
 do
@@ -25,36 +65,22 @@ do
         NONCODEID="${WORDS[2]}"
         ORGANISM=${WORDS[10]} && [[ ${#WORDS[@]} -lt 16 ]] && ORGANISM=${WORDS[9]}
 
-        if ! grep -q "NON" <<<$NONCODEID; then
-            if ! grep -q "ENS" <<<$NONCODEID; then
+        if ! grep -q "NON" <<< $NONCODEID; then
+            if ! grep -q "ENS" <<< $NONCODEID; then
                 continue
             fi
         fi
 
-        curl -s -H "Accept: text/plain; format=tsv" "https://rest.uniprot.org/uniprotkb/search?query=${PROTID}" --output $TMP_FILE
-        NUM_LINES=`wc -l ${TMP_FILE} | awk '{print $1}'`
-        if [ ${NUM_LINES} -gt 1 ]
+        if [ ! "${PROTEINS[$PROTID]+abc}" ]
         then
-            FOUND=0
-            while IFS= read -r LINE
-            do
-                IFS=$'\t' read -r -a WORDS <<< "$LINE"
-                TMP_ORGANISM="${WORDS[5]}"
-                if grep -q "${ORGANISM}" <<<$TMP_ORGANISM; then
-                    PROTID="${WORDS[0]}"
-                    FOUND=1
-                    break
-                fi
-            done < $TMP_FILE
-
-            if [ $FOUND -eq 0 ]
+            find_protein_id $PROTID "${ORGANISM}"
+            if [ $? -gt 0 ]
             then
-                echo "Cannot find protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}"
-                continue
+                PROTID=${WORDS[4]}
+                echo " -> Retrying with ID: ${PROTID}"
+                find_protein_id $PROTID "${ORGANISM}"
+                [ $? -gt 0 ] && continue
             fi
-        else
-            echo "Cannot find protein with ID: ${PROTID}"
-            continue
         fi
 
         echo "${PROTID} ${NONCODEID} ${ORGANISM}" >> $INTERACTS_OUTPUT
