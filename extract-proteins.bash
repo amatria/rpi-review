@@ -29,12 +29,16 @@ touch $INTERACTS_OUTPUT
 declare -A ALLOWED_ORGANISMS=( ["Homo sapiens"]=0 ["Mus musculus"]=0 ["Drosophila melanogaster"]=0 )
 
 find_protein () {
-    [[ "${PROTID}" == "-" ]] || [[ "${PROTID}" == *"heterodimer"* ]] || [[ "${PROTID}" == *[![:ascii:]]* ]] && return 1
+    [[ "${PROTID}" == "-" ]] || \
+    [[ "${PROTID}" == *"heterodimer"* ]] || \
+    [[ "${PROTID}" == *"#"* ]] || \
+    [[ "${PROTID}" == *[![:ascii:]]* ]] && \
+    return 1
 
     local PROTID_LINK=$(sed -e "s/ /%20/g" <<< "${PROTID}")
     [[ ! -f "${CACHE}/'${PROTID}'.txt" ]] && curl -s -H "Accept: text/plain; format=tsv" "https://rest.uniprot.org/uniprotkb/search?query=${PROTID_LINK}" --output "${CACHE}/'${PROTID}'.txt"
 
-    local NUM_LINES=`wc -l ${CACHE}/\'${PROTID}\'.txt | awk '{print $1}'`
+    local NUM_LINES=`wc -l "${CACHE}/'${PROTID}'.txt" | awk '{print $1}'`
     [[ "${NUM_LINES}" -lt "2" ]] && return 1
 
     local LINE
@@ -92,6 +96,7 @@ download_protein () {
     fi
 
     [[ ! -f "${CACHE}/'${PROTID}'.fa" ]] && curl -s -H "Accept: text/plain; format=fasta" "https://rest.uniprot.org/uniprotkb/${PROTID}" --output "${CACHE}/'${PROTID}'.fa"
+
     if grep -q "Error messages" "${CACHE}/'${PROTID}'.fa"; then
         echo -e "\033[0;33mWarning:\033[0m could not download protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}"
         return 1
@@ -113,7 +118,7 @@ download_lncRNA () {
     sed -n '2{p;q}' $TMP2_FILE >> $RNA_OUTPUT
 }
 
-echo -e "\033[1mlncRNA-protein downloader\033[0m -- by Iñaki Amatria Barral"
+echo -e "\033[1mlncRNA--protein downloader\033[0m -- by Iñaki Amatria Barral"
 
 ANALYZED=0
 TOTAL_LINES=`wc -l $INPUT | awk '{print $1}'`
