@@ -4,7 +4,7 @@ import sys
 
 from bs4 import BeautifulSoup
 
-soup = BeautifulSoup(open(f"cache/{sys.argv[1]}"), "html.parser")
+soup = BeautifulSoup(open(sys.argv[1]), "html.parser")
 
 tables = soup.select("table.table-1")
 
