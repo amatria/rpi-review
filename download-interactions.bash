@@ -67,7 +67,8 @@ find_lncRNA () {
 
         [[ ! -f "${CACHE}/${TMP_NAME}.html" ]] && curl -s "http://www.noncode.org/show_rna.php?id=${NAMES[0]}&version=${NAMES[1]}" --output "${CACHE}/${TMP_NAME}.html"
 
-        if python3 utils/noncode_html_parser.py "${CACHE}/${TMP_NAME}.html" | grep -i -q "${ORGANISM}"; then
+        local TMP_ORGANISM=`python3 utils/noncode_html_parser.py "${CACHE}/${TMP_NAME}.html" organism`
+        if  grep -i -q "${ORGANISM}" <<< "${TMP_ORGANISM}"; then
             NONCODEID="${TMP_NAME}"
             return 0
         fi
@@ -107,7 +108,7 @@ download_lncRNA () {
     fi
 
     echo ">${NONCODEID}" >> $RNA_OUTPUT
-    python3 utils/noncode_html_parser.py "${CACHE}/${NONCODEID}.html" | sed -n '2{p;q}' >> $RNA_OUTPUT
+    python3 utils/noncode_html_parser.py "${CACHE}/${NONCODEID}.html" sequence >> $RNA_OUTPUT
 }
 
 echo -e "\033[1mlncRNA-protein downloader\033[0m -- by Iñaki Amatria Barral"
