@@ -25,6 +25,13 @@ touch $RNA_OUTPUT
 touch $PROTEIN_OUTPUT
 touch $INTERACTIONS_OUTPUT
 
+find_protein_uniprot () {
+    local PROTID_LINK=$(sed -e "s/ /%20/g" <<< "${PROTID}")
+    curl -s -f -H "Accept: text/plain; format=tsv" "https://rest.uniprot.org/uniprotkb/search?query=${PROTID_LINK}" --output "${CACHE}/'${PROTID}'.txt"
+    [[ "$?" -gt "0" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m could not download information for protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}" && return 1
+    return 0
+}
+
 find_protein () {
     [[ "${PROTID}" == "-" ]] || \
     [[ "${PROTID}" == *"heterodimer"* ]] || \
@@ -32,8 +39,9 @@ find_protein () {
     [[ "${PROTID}" == *[![:ascii:]]* ]] && \
     return 1
 
-    local PROTID_LINK=$(sed -e "s/ /%20/g" <<< "${PROTID}")
-    [[ ! -f "${CACHE}/'${PROTID}'.txt" ]] && curl -s -H "Accept: text/plain; format=tsv" "https://rest.uniprot.org/uniprotkb/search?query=${PROTID_LINK}" --output "${CACHE}/'${PROTID}'.txt"
+    if [[ ! -f "${CACHE}/'${PROTID}'.txt" ]]; then
+        find_protein_uniprot || return 1
+    fi
 
     local NUM_LINES=`wc -l "${CACHE}/'${PROTID}'.txt" | awk '{print $1}'`
     [[ "${NUM_LINES}" -lt "2" ]] && return 1
@@ -54,6 +62,12 @@ find_protein () {
     return 1
 }
 
+find_lncRNA_noncode () {
+    curl -s -f "http://www.noncode.org/show_rna.php?id=${NAMES[0]}&version=${NAMES[1]}" --output "${CACHE}/${TMP_NAME}.html"
+    [[ "$?" -gt "0" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m could not download information for lncRNA with ID: ${TMP_NAME} and ORGANISM: ${ORGANISM}" && return 1
+    return 0
+}
+
 find_lncRNA () {
     [[ "${NONCODEID}" == "-" ]] && return 1
 
@@ -65,7 +79,9 @@ find_lncRNA () {
         local TMP_NAME="${WORDS[0]}"
         IFS="." read -r -a NAMES <<< "${TMP_NAME}"
 
-        [[ ! -f "${CACHE}/${TMP_NAME}.html" ]] && curl -s "http://www.noncode.org/show_rna.php?id=${NAMES[0]}&version=${NAMES[1]}" --output "${CACHE}/${TMP_NAME}.html"
+        if [[ ! -f "${CACHE}/${TMP_NAME}.html" ]]; then
+            find_lncRNA_noncode || return 1
+        fi
 
         local TMP_ORGANISM=`python3 utils/noncode_html_parser.py "${CACHE}/${TMP_NAME}.html" organism`
         if  grep -i -q "${ORGANISM}" <<< "${TMP_ORGANISM}"; then
@@ -84,15 +100,23 @@ check_duplicate () {
     return 0
 }
 
+download_protein_uniprot () {
+    curl -s -f -H "Accept: text/plain; format=fasta" "https://rest.uniprot.org/uniprotkb/${PROTID}" --output "${CACHE}/'${PROTID}'.fa"
+    [[ "$?" -gt "0" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m could not download protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}" && return 1
+    return 0
+}
+
 download_protein () {
     if grep -q "${PROTID}" $INTERACTIONS_OUTPUT; then
         return 0
     fi
 
-    [[ ! -f "${CACHE}/'${PROTID}'.fa" ]] && curl -s -H "Accept: text/plain; format=fasta" "https://rest.uniprot.org/uniprotkb/${PROTID}" --output "${CACHE}/'${PROTID}'.fa"
+    if [[ ! -f "${CACHE}/'${PROTID}'.fa" ]]; then
+        download_protein_uniprot || return 1
+    fi
 
     if grep -q "Error messages" "${CACHE}/'${PROTID}'.fa"; then
-        echo -e "\033[0;33mWarning:\033[0m could not download protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}"
+        echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m error with downloaded protein with ID: ${PROTID} and ORGANISM: ${ORGANISM}"
         return 1
     fi
 
@@ -119,7 +143,7 @@ TOTAL_LINES=`wc -l $INPUT | awk '{print $1}'`
 while IFS= read -r LINE; do
     ANALYZED=$((ANALYZED + 1))
     PROGRESS=`echo "${ANALYZED} ${TOTAL_LINES}" | awk '{printf "%.2f", $1 / $2 * 100}'`
-    echo -ne "\r\033[1mProgress:\033[0m ${PROGRESS}% (${ANALYZED}/${TOTAL_LINES})"
+    echo -ne "\r\033[2K\033[1m\033[1mProgress:\033[0m ${PROGRESS}% (${ANALYZED}/${TOTAL_LINES})"
 
     [[ "${LINE}" == "#"* ]] && continue
 
