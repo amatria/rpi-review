@@ -1,13 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-INPUT=prueba.fa
-OUTPUT=prueba.out
-TMP=prueba.tmp
+# START OF CONFIGURATION
+
+INPUT=rna.fa
+OUTPUT=rna-struct.fa
+TMP=rna.tmp
+
+# END OF CONFIGURATION
 
 [ ! -f $INPUT ] && echo "Input file does not exist" && exit 1
 [ -f $OUTPUT ] && rm -rf $OUTPUT
 
-RNAfold --jobs=16 --noPS --outfile=$TMP $INPUT
+RNAfold --jobs=4 --noPS --outfile=$TMP $INPUT
 
 while IFS= read -r LINE
 do

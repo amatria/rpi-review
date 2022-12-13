@@ -368,7 +368,8 @@ class RNAEncoder:
             vec = np.array(vec)
             offset += vec.size
             if self.CODING_FREQUENCY:
-                vec = vec / vec.max()
+                if vec.max() != 0.0:
+                    vec = vec / vec.max()
             result += list(vec)
         return np.array(result)
 
@@ -398,7 +399,8 @@ class RNAEncoder:
             vec_seq = np.array(vec_seq)
             offset_seq += vec_seq.size
             if self.CODING_FREQUENCY:
-                vec_seq = vec_seq / vec_seq.max()
+                if vec_seq.max() != 0.0:
+                    vec_seq = vec_seq / vec_seq.max()
             result_seq += list(vec_seq)
 
 
@@ -413,7 +415,8 @@ class RNAEncoder:
             vec_struct = np.array(vec_struct)
             offset_struct += vec_struct.size
             if self.CODING_FREQUENCY:
-                vec_struct = vec_struct / vec_struct.max()
+                if vec_struct.max() != 0.0:
+                    vec_struct = vec_struct / vec_struct.max()
             result_struct += list(vec_struct)
         return np.array(result_seq + result_struct)
 

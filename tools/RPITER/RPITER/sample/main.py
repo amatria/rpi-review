@@ -59,20 +59,24 @@ def load_pair_dataset(opts):
 
 def encode_sequences(pairs, p_seqs, p_structs, r_seqs, r_structs, p_enc, r_enc):
     ret = []
-    count = 0
     for p_name, r_name in pairs.keys():
         p_seq = p_seqs[p_name]
         r_seq = r_seqs[r_name]
         p_struct = p_structs[p_name]
         r_struct = r_structs[r_name]
 
-        p_conjoint = p_enc.encode_conjoint(p_seq)
-        r_conjoint = r_enc.encode_conjoint(r_seq)
-        p_conjoint_struct = p_enc.encode_conjoint_struct(p_seq, p_struct)
-        r_conjoint_struct = r_enc.encode_conjoint_struct(r_seq, r_struct)
+        try:
+            p_conjoint = p_enc.encode_conjoint(p_seq)
+            r_conjoint = r_enc.encode_conjoint(r_seq)
+            p_conjoint_struct = p_enc.encode_conjoint_struct(p_seq, p_struct)
+            r_conjoint_struct = r_enc.encode_conjoint_struct(r_seq, r_struct)
+        except IndexError:
+            print('encode_sequences: fatal IndexError with {}-{}'.format(p_name, r_name))
+            exit(1)
 
         if any([type(x) == str for x in [p_conjoint, r_conjoint, p_conjoint_struct, r_conjoint_struct]]):
             print('Skip {}-{}'.format(p_name, r_name))
+            continue
 
         ret.append([[p_conjoint, r_conjoint], [p_conjoint_struct, r_conjoint_struct], pairs[(p_name, r_name)]])
     return ret

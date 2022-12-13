@@ -2,11 +2,11 @@
 
 # START OF CONFIGURATION
 
-INPUT=data/npinter-v5.txt
-NONCODEIDS=data/ids-noncode-v5.txt
+INPUT=const/npinter-v5.txt
+NONCODEIDS=const/ids-noncode-v5.txt
 RNA_OUTPUT=rna.fa
-PROTEIN_OUTPUT=protein.fa
-INTERACTIONS_OUTPUT=interactions.txt
+PROTEIN_OUTPUT=pro.fa
+INTERACTIONS_OUTPUT=pairs.txt
 
 # END OF CONFIGURATION
 
