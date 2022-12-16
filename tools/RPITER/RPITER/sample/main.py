@@ -3,6 +3,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+import sys
 import math
 import numpy as np
 
@@ -199,7 +200,8 @@ def train_model(opts):
     encoded_pairs = encode_sequences(pairs, p_sequences, p_structures, r_sequences, r_structures, p_encoder, r_encoder)
 
     X, y = preprocess_data(encoded_pairs, opts)
-    X_train, y_train_mono, X_val, y_val_mono = split_data(X, y)
+    #X_train, y_train_mono, X_val, y_val_mono = split_data(X, y)
+    X_train, y_train_mono, X_val, y_val_mono = split_data(X, y, all_values=True)
 
     y_train = to_categorical(y_train_mono, num_classes=2, dtype='int32')
     y_val = to_categorical(y_val_mono, num_classes=2, dtype='int32')
@@ -270,9 +272,9 @@ def train_model(opts):
     model_ensemble.fit(x=X_train, y=y_train, epochs=opts.SECOND_TRAIN_EPOCHS[4], batch_size=opts.BATCH_SIZE, shuffle=opts.SHUFFLE, verbose=0, callbacks=[callback])
 
     # evaluate
-    y_pred = model_ensemble.predict(X_val, verbose=0)
-    acc, sn, sp, pre, mcc, auc = calc_metrics(y_val[:, 1], y_pred[:, 1])
-    print('acc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(acc, sn, sp, pre, mcc, auc))
+    # y_pred = model_ensemble.predict(X_val, verbose=0)
+    # acc, sn, sp, pre, mcc, auc = calc_metrics(y_val[:, 1], y_pred[:, 1])
+    # print('acc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(acc, sn, sp, pre, mcc, auc))
 
     model_ensemble.save(os.path.join(opts.DATASET_BASE_PATH, '{}.rpiter.model'.format(opts.DATASET)))
 
@@ -297,7 +299,7 @@ def run_model(opts):
 
     y_pred = model_ensemble.predict(X_val, verbose=0)
     acc, sn, sp, pre, mcc, auc = calc_metrics(y_val[:, 1], y_pred[:, 1])
-    print('acc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(acc, sn, sp, pre, mcc, auc))
+    print('acc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(acc, sn, sp, pre, mcc, auc), file=sys.stderr)
 
 class Options:
     MODEL = None
@@ -321,7 +323,7 @@ class Options:
 
     FIRST_OPTIMIZER = 'adam'
     SECOND_OPTIMIZER = 'sgd'
-    SGD_LEARNING_RATE = 0.001
+    SGD_LEARNING_RATE = 0.01
     ADAM_LEARNING_RATE = 0.001
     PATIENCES = [10, 10, 10, 10, 10]
 
@@ -329,8 +331,8 @@ class Options:
     MONITOR = 'acc'
     MIN_DELTA = 0.0
     BATCH_SIZE = 150
-    FIRST_TRAIN_EPOCHS = [20, 20, 20, 20, 10]
-    SECOND_TRAIN_EPOCHS = [20, 20, 20, 20, 10]
+    FIRST_TRAIN_EPOCHS = [35, 35, 35, 35, 15]
+    SECOND_TRAIN_EPOCHS = [10, 10, 10, 10, 10]
 
 if __name__ == '__main__':
     parser = ArgumentParser(

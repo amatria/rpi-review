@@ -9,6 +9,7 @@ TMP=pro.tmp
 # END OF CONFIGURATION
 
 [[ ! -f $INPUT ]] && echo -e "\033[0;31mError:\033[0m input file does not exist" && exit 1
+
 [[ -f $OUTPUT ]] && rm -rf $OUTPUT
 [[ -f $TMP ]] && rm -rf $TMP
 
