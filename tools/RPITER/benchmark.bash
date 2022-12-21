@@ -2,14 +2,14 @@
 
 # START OF CONFIGURATION
 
-DATASETS=( 'rpi2241' 'rpi1807' 'rpi488' 'rpi369' )
+DATASETS=( 'rpi2241' 'rpi1807' 'rpi488' 'rpi369' 'npinter-v5' )
 
 # END OF CONFIGURATION
 
 source env/bin/activate
 
 cd RPITER
-for (( i=0; i<${#DATASETS[@]}; i++ )); do
+for (( i=0; i<${#DATASETS[@]}-1; i++ )); do
     for (( j=0; j<${#DATASETS[@]}; j++ )); do
         python rpiter.py -d ${DATASETS[$i]} -m ${DATASETS[$j]} 1> /dev/null
     done
