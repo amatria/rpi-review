@@ -125,7 +125,7 @@ download_protein () {
 
     local SEQUENCE=`sed 1d "${CACHE}/'${PROTID}'.fa"`
     local SEQUENCE_LENGTH=`echo "${SEQUENCE}" | wc -c`
-    [[ "${SEQUENCE_LENGTH}" -lt "${MINIMUM_PROTEIN_LENGTH}" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m skipping protein with ID: ${PROTID} and ORGANISM: ${ORGANISM} because it is too short" && return 1
+    [[ "${SEQUENCE_LENGTH}" -lt "${MINIMUM_PROTEIN_LENGTH}" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m skipping protein with ID: ${PROTID} and ORGANISM: ${ORGANISM} because it is too small" && return 1
 
     echo -e ">${PROTID}\n${SEQUENCE}" >> $PROTEIN_OUTPUT
 
@@ -140,7 +140,7 @@ download_lncRNA () {
     local SEQUENCE=`python3 utils/noncode_html_parser.py "${CACHE}/${NONCODEID}.html" sequence`
     local SEQUENCE_LENGTH=`echo "${SEQUENCE}" | wc -c`
     [[ "${SEQUENCE_LENGTH}" -gt "${MAXIMUM_RNA_LENGTH}" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m skipping lncRNA with ID: ${NONCODEID} and ORGANISM: ${ORGANISM} because it is too big" && return 1
-
+    
     echo -e ">${NONCODEID}\n${SEQUENCE}" >> $RNA_OUTPUT
 
     return 0
