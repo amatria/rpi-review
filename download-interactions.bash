@@ -2,6 +2,9 @@
 
 # START OF CONFIGURATION
 
+MAXIMUM_RNA_LENGTH=10000
+MINIMUM_PROTEIN_LENGTH=30
+
 INPUT=const/npinter-v5.txt
 NONCODEIDS=const/ids-noncode-v5.txt
 RNA_OUTPUT=rna.fa
@@ -120,19 +123,27 @@ download_protein () {
         return 1
     fi
 
-    echo ">${PROTID}" >> $PROTEIN_OUTPUT
-    sed 1d "${CACHE}/'${PROTID}'.fa" >> $PROTEIN_OUTPUT
+    local SEQUENCE=`sed 1d "${CACHE}/'${PROTID}'.fa"`
+    local SEQUENCE_LENGTH=`echo "${SEQUENCE}" | wc -c`
+    [[ "${SEQUENCE_LENGTH}" -lt "${MINIMUM_PROTEIN_LENGTH}" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m skipping protein with ID: ${PROTID} and ORGANISM: ${ORGANISM} because it is too short" && return 1
+
+    echo -e ">${PROTID}\n${SEQUENCE}" >> $PROTEIN_OUTPUT
 
     return 0
 }
 
 download_lncRNA () {
     if grep -q "${NONCODEID}" $INTERACTIONS_OUTPUT; then
-        return
+        return 0
     fi
 
-    echo ">${NONCODEID}" >> $RNA_OUTPUT
-    python3 utils/noncode_html_parser.py "${CACHE}/${NONCODEID}.html" sequence >> $RNA_OUTPUT
+    local SEQUENCE=`python3 utils/noncode_html_parser.py "${CACHE}/${NONCODEID}.html" sequence`
+    local SEQUENCE_LENGTH=`echo "${SEQUENCE}" | wc -c`
+    [[ "${SEQUENCE_LENGTH}" -gt "${MAXIMUM_RNA_LENGTH}" ]] && echo -e "\r\033[2K\033[1m\033[0;33mWarning:\033[0m skipping lncRNA with ID: ${NONCODEID} and ORGANISM: ${ORGANISM} because it is too big" && return 1
+
+    echo -e ">${NONCODEID}\n${SEQUENCE}" >> $RNA_OUTPUT
+
+    return 0
 }
 
 echo -e "\033[1mlncRNA-protein downloader\033[0m -- by Iñaki Amatria Barral"
@@ -175,6 +186,7 @@ while IFS= read -r LINE; do
         download_protein
         [[ "$?" -gt "0" ]] && continue
         download_lncRNA
+        [[ "$?" -gt "0" ]] && continue
 
         echo -e "${PROTID}\t${NONCODEID}\t${ORGANISM}" >> $INTERACTIONS_OUTPUT
     fi
