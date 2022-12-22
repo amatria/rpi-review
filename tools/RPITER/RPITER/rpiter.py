@@ -10,8 +10,8 @@ import numpy as np
 from argparse import ArgumentParser
 
 from tensorflow.keras import optimizers
+from tensorflow.keras.models import Model
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, concatenate
 
 from sklearn.preprocessing import StandardScaler
@@ -83,7 +83,7 @@ def encode_sequences(pairs, p_seqs, p_structs, r_seqs, r_structs, p_enc, r_enc):
             continue
 
         if any([type(x) == str for x in [p_conjoint, r_conjoint, p_conjoint_struct, r_conjoint_struct]]):
-            print('EncoderError: skip {}-{}'.format(p_name, r_name))
+            print('EncodeError: skip {}-{}'.format(p_name, r_name))
             continue
 
         ret.append([[p_conjoint, r_conjoint], [p_conjoint_struct, r_conjoint_struct], pairs[(p_name, r_name)]])
@@ -117,33 +117,6 @@ def preprocess_data(encoded_pairs, opts):
     ]
 
     return samples, labels
-
-def split_data(X, y, all_values=False):
-    X_indices = [i for i in range(len(y))]
-    y_indices = [i for i in range(len(y))]
-
-    if not all_values:
-        X_train_indices, X_val_indices, y_train_indices, y_val_indices = train_test_split(X_indices, y_indices, test_size=0.2, stratify=y)
-    else:
-        X_train_indices, X_val_indices, y_train_indices, y_val_indices = X_indices, X_indices, y_indices, y_indices
-
-    X_train = [
-        [X[0][0][X_train_indices], X[0][1][X_train_indices]],
-        [X[1][0][X_train_indices], X[1][1][X_train_indices]],
-        [X[2][0][X_train_indices], X[2][1][X_train_indices]],
-        [X[3][0][X_train_indices], X[3][1][X_train_indices]],
-    ]
-    y_train = y[y_train_indices]
-
-    X_val = [
-        [X[0][0][X_val_indices], X[0][1][X_val_indices]],
-        [X[1][0][X_val_indices], X[1][1][X_val_indices]],
-        [X[2][0][X_val_indices], X[2][1][X_val_indices]],
-        [X[3][0][X_val_indices], X[3][1][X_val_indices]],
-    ]
-    y_val = y[y_val_indices]
-
-    return X_train, y_train, X_val, y_val
 
 def get_optimizer(opt_name, opts):
     if opt_name == 'sgd':
@@ -270,7 +243,6 @@ def kfold_cross_validation(opts):
     r_encoder = RNAEncoder(opts.R_WINDOW_UPLIMIT, opts.R_STRUCT_WINDOW_UPLIMIT, opts.CODING_FREQUENCY, opts.VECTOR_REPETITION_CNN)
 
     encoded_pairs = encode_sequences(pairs, p_sequences, p_structures, r_sequences, r_structures, p_encoder, r_encoder)
-
     X, y = preprocess_data(encoded_pairs, opts)
 
     # clean memory
@@ -284,7 +256,7 @@ def kfold_cross_validation(opts):
 
     # stratified k-fold cross validation
     metrics = np.zeros(6)
-    skf = StratifiedKFold(n_splits=opts.N_FOLDS, shuffle=True)
+    skf = StratifiedKFold(n_splits=opts.N_FOLDS, random_state=opts.RANDOM_STATE, shuffle=True)
     for _, (train_index, test_index) in enumerate(skf.split(np.zeros(len(y)), y)):
         X_train = [
             [X[0][0][train_index], X[0][1][train_index]],
@@ -324,9 +296,7 @@ def train_and_validate_model(opts):
 
     encoded_pairs = encode_sequences(pairs, p_sequences, p_structures, r_sequences, r_structures, p_encoder, r_encoder)
     X, y = preprocess_data(encoded_pairs, opts)
-    _, _, X_val, y_val_mono = split_data(X, y, all_values=True)
-
-    y_val = to_categorical(y_val_mono, num_classes=2, dtype='int32')
+    X_val, y_val = X, to_categorical(y, num_classes=2, dtype='int32')
 
     # train data
     pairs = load_pair_dataset(opts, model=True)
@@ -335,9 +305,7 @@ def train_and_validate_model(opts):
 
     encoded_pairs = encode_sequences(pairs, p_sequences, p_structures, r_sequences, r_structures, p_encoder, r_encoder)
     X, y = preprocess_data(encoded_pairs, opts)
-    _, _, X_train, y_train_mono = split_data(X, y, all_values=True)
-
-    y_train = to_categorical(y_train_mono, num_classes=2, dtype='int32')
+    X_train, y_train = X, to_categorical(y, num_classes=2, dtype='int32')
 
     # clean memory
     p_encoder, r_encoder = None, None
@@ -397,6 +365,7 @@ class Options:
 
     KFOLD = False
     N_FOLDS = 5
+    RANDOM_STATE = 42
 
 if __name__ == '__main__':
     parser = ArgumentParser(
