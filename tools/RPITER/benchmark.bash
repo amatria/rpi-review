@@ -11,7 +11,6 @@ source env/bin/activate
 for (( i=0; i<${#DATASETS[@]}; i++ )); do
     python RPITER/rpiter.py -d ${DATASETS[$i]} -m ${DATASETS[$i]} 1> /dev/null
 done
-echo
 for (( i=0; i<${#DATASETS[@]}-1; i++ )); do
-    python RPITER/rpiter.py -d npinter-v5 -m ${DATASETS[$i]} -p 1> /dev/null
+    python RPITER/rpiter.py -d npinter-v5 -m ${DATASETS[$i]} 1> /dev/null
 done
