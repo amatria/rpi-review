@@ -105,10 +105,10 @@ def SSEC(opts, model=False):
                     protein_seq_dict[protein_index] = seq
                     protein_index = protein_index + 1
         groups = ['AGV', 'ILFP', 'YMTS', 'HNQW', 'RK', 'DE', 'C']
-        group_dict = TransDict_from_list(groups)  
+        group_dict = TransDict_from_list(groups)
         protein_tris = get_3_protein_struct_trids()
         for i in protein_seq_dict:
-            protein_seq = translate_sequence(protein_seq_dict[i], group_dict) 
+            protein_seq = translate_sequence(protein_seq_dict[i], group_dict)
             protein_tri_fea = get_tri_nucleotide_composition(protein_tris, protein_seq)
             ssec_kmer.append(protein_tri_fea)
             protein_index = protein_index + 1
