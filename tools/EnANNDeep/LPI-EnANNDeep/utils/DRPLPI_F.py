@@ -1,12 +1,12 @@
-import numpy as np
+import os
 import itertools
-from sklearn.preprocessing import StandardScaler
-import pandas as pd
-from random import randint
 
+import numpy as np
+import pandas as pd
+
+from sklearn.preprocessing import StandardScaler
 
 ALPHABET = 'ACGU'
-
 
 def get_tris():
     nucle_com = []
@@ -23,7 +23,6 @@ def get_tris():
         nucle_com.append(ch0 + ch1 + ch2)
     return nucle_com
 
-
 def get_tri_nucleotide_composition(tris, seq):
     seq_len = len(seq)
     tri_feature = []
@@ -33,7 +32,6 @@ def get_tri_nucleotide_composition(tris, seq):
         num = seq.count(val)
         tri_feature.append(float(num) / seq_len)
     return tri_feature
-
 
 def get_3_protein_trids():
     nucle_com = []
@@ -50,7 +48,6 @@ def get_3_protein_trids():
         nucle_com.append(ch0 + ch1 + ch2)
     return nucle_com
 
-
 def get_3_protein_struct_trids():
     nucle_com = []
     chars = ['H', 'E', 'C']
@@ -66,9 +63,7 @@ def get_3_protein_struct_trids():
         nucle_com.append(ch0 + ch1 + ch2)
     return nucle_com
 
-
 def translate_sequence(seq, TranslationDict):
-    import string
     from_list = []
     to_list = []
     for k, v in TranslationDict.items():
@@ -77,9 +72,7 @@ def translate_sequence(seq, TranslationDict):
     TRANS_seq = seq.translate(str.maketrans(str(from_list), str(to_list)))
     return TRANS_seq
 
-
 def TransDict_from_list(groups):
-    transDict = dict()
     tar_list = ['0', '1', '2', '3', '4', '5', '6']
     result = {}
     index = 0
@@ -90,49 +83,46 @@ def TransDict_from_list(groups):
         index = index + 1
     return result
 
+ssec_kmer = []
+ssec_kmer_name = ''
 
+def SSEC(opts, model=False):
+    global ssec_kmer
+    global ssec_kmer_name
 
-
-
-def SSEC(path):
-    interaction_pair = {}
-    RNA_seq_dict = {}
-    protein_seq_dict = {}
-    protein_index = 1
-    count = 1
-    with open(path + 'pro.fasta', 'r') as fp:
-        for line in fp:
-            if line[0] == '>':
-                continue
-            else:
-                seq = line[:-1]
-                protein_seq_dict[protein_index] = seq
-                protein_index = protein_index + 1
-    groups = ['AGV', 'ILFP', 'YMTS', 'HNQW', 'RK', 'DE', 'C']
-    group_dict = TransDict_from_list(groups)  
-    protein_tris = get_3_protein_struct_trids()  
-    bpf = []
-    kmer = []
-    for i in protein_seq_dict:
-        protein_seq = translate_sequence(protein_seq_dict[i], group_dict) 
-        protein_tri_fea = get_tri_nucleotide_composition(protein_tris, protein_seq)
-        kmer.append(protein_tri_fea)
-        protein_index = protein_index + 1
-
-    return np.array(kmer[0])
-
+    path = opts.DATASET_BASE_PATH if not model else opts.MODEL_BASE_PATH
+    if ssec_kmer == [] or ssec_kmer_name != str(path):
+        ssec_kmer = []
+        ssec_kmer_name = str(path)
+        protein_seq_dict = {}
+        protein_index = 1
+        with open(os.path.join(path, 'pro.fa'), 'r') as fp:
+            for line in fp:
+                if line[0] == '>':
+                    continue
+                else:
+                    seq = line[:-1]
+                    protein_seq_dict[protein_index] = seq
+                    protein_index = protein_index + 1
+        groups = ['AGV', 'ILFP', 'YMTS', 'HNQW', 'RK', 'DE', 'C']
+        group_dict = TransDict_from_list(groups)  
+        protein_tris = get_3_protein_struct_trids()
+        for i in protein_seq_dict:
+            protein_seq = translate_sequence(protein_seq_dict[i], group_dict) 
+            protein_tri_fea = get_tri_nucleotide_composition(protein_tris, protein_seq)
+            ssec_kmer.append(protein_tri_fea)
+            protein_index = protein_index + 1
+    return np.array(ssec_kmer[0])
 
 def kmer(kmerid, k):
     kmer = ''
     nts = ['A', 'C', 'G', 'T']
-    for i in range(k):
+    for _ in range(k):
         kmer = nts[(kmerid % 4)] + kmer
         kmerid = int(kmerid / 4)
-
     return kmer
 
-
-def InsertgappedVect(seq, g = 8):  # 1___1
+def InsertgappedVect(seq, g = 8):
     feature = []
     m = list(itertools.product(ALPHABET, repeat = 2))
     for i in range(1, g + 1, 1):
@@ -145,13 +135,9 @@ def InsertgappedVect(seq, g = 8):  # 1___1
             feature.append(count)
     return feature
 
-
-def reverse_complement_features(feature, seq):
-
+def reverse_complement_features(seq):
     reverse_complements_2 = ['AA','AC','AG','CA','CC','GA','AT','CG','GC','TA']
-
     L2 = len(seq) - 2 + 1
-
     feature = []
     count_1 = 0
     count_2 = 0
@@ -169,7 +155,6 @@ def reverse_complement_features(feature, seq):
         for j in range(0, 2):
             pattern.append(seq[i + j])
         s = ''.join(pattern)
-
         if (s in reverse_complements_2):
                 if (s == 'AA'):
                     count_1 += 1
@@ -191,7 +176,6 @@ def reverse_complement_features(feature, seq):
                     count_9 += 1
                 elif (s == 'TA'):
                     count_10 += 1
-
     feature.append(count_1 / L2)
     feature.append(count_2 / L2)
     feature.append(count_3 / L2)
@@ -202,38 +186,28 @@ def reverse_complement_features(feature, seq):
     feature.append(count_8 / L2)
     feature.append(count_9 / L2)
     feature.append(count_10 / L2)
-
     return feature
 
 t = {}
 bar = 5
-
 res_list = []
 
-
-def rna_feature_extract(feature, seq, path):
-    finstr = open(path + 'RNA.fasta', "r")
-    tris = get_tris()
-    feature = []
-    tkmer = get_tri_nucleotide_composition(tris, seq)
-    gkm = InsertgappedVect(seq, g = 8)
-    rcf = reverse_complement_features(feature, seq)
+def get_rna_value(opts, model=False):
+    path = opts.DATASET_BASE_PATH if not model else opts.MODEL_BASE_PATH
+    finstr = open(os.path.join(path, 'rna.fa'), 'r')
     pred_list = []
 
     index = -1
-    for index_1, line in enumerate(finstr):
-
+    for _, line in enumerate(finstr):
         if line[0] == '>':
             continue
         index += 1
-
         if index % 101 == 0 and index != 0:
             num_list = []
             list = []
-            for (k, v) in t.items():
+            for (_, v) in t.items():
                 num_list.append(v)
                 num_list.sort(reverse = True)
-                res = 0
                 total_num = 0
                 sum = 0
                 base_line = 0
@@ -244,26 +218,20 @@ def rna_feature_extract(feature, seq, path):
             if num_list[i] > base_line:
                 total_num += 1
                 res_list.append(total_num)
-                last_seq = " "
-            for (k, v) in t.items():
+            for (_, v) in t.items():
                 if v > base_line or (v == base_line and total_num < 5):
-                    last_seq = k
                     list.append(1. * v / 100)
                     if len(num_list) > bar and v == num_list[bar]:
                         total_num += 1
-
             pred = 1. * list[len(list) - 1] / (5 - total_num + 1)
             list[len(list) - 1] = pred
             for i in range(total_num, 5):
                 list.append(pred)
-
             list.append(1. * (100 - sum) / 100)
             pred_list.append(np.array(list))
             t.clear()
-
         if index % 101 == 0:
             continue
-
         a = line.split(" ")
         if a[0] in t:
             t[a[0]] = t[a[0]] + 1
@@ -272,10 +240,9 @@ def rna_feature_extract(feature, seq, path):
 
     num_list = []
     list = []
-    for (k, v) in t.items():
+    for (_, v) in t.items():
         num_list.append(v)
     num_list.sort(reverse = True)
-    res = 0
     total_num = 0
     sum = 0
     base_line = 0
@@ -286,10 +253,8 @@ def rna_feature_extract(feature, seq, path):
         if num_list[i] > base_line:
             total_num += 1
     res_list.append(total_num)
-    last_seq = " "
-    for (k, v) in t.items():
+    for (_, v) in t.items():
         if v > base_line or (v == base_line and total_num < 5):
-            last_seq = k
             list.append(1. * v / 100)
             if len(num_list) > bar and v == num_list[bar]:
                 total_num += 1
@@ -301,20 +266,22 @@ def rna_feature_extract(feature, seq, path):
 
     pred_list.append(np.array(list))
     t.clear()
-    pred_list = np.array(pred_list)
+    pred_list = np.array(pred_list, dtype=object)
 
     pred_list = np.array(list)
     result = pred_list
+    return result[:5]
 
-    kmer = gkm + tkmer + rcf
-
-    feature = np.append(kmer, result[:5])
-    return feature
+def rna_feature_extract(seq, rna_value):
+    tris = get_tris()
+    tkmer = get_tri_nucleotide_composition(tris, seq)
+    gkm = InsertgappedVect(seq, g=8)
+    rcf = reverse_complement_features(seq)
+    return np.append(gkm + tkmer + rcf, rna_value)
 
 
 def BPF(seq_temp):
     seq = seq_temp
-    chars = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
     fea = []
     tem_vec = []
     k = 16
@@ -362,94 +329,7 @@ def BPF(seq_temp):
         fea = fea + tem_vec
     return fea
 
-
-
-def protein_feature_extract(feature, seq, path):
-    tris = get_tris()
-    feature = []
+def protein_feature_extract(seq, opts, model=False):
     bpf = BPF(seq)
-    sse = SSEC(path)
-    feature = np.append(sse, bpf)
-    return feature
-
-
-
-def getData(seed,path):
-    df = pd.read_csv(path + 'label.csv',header=0,index_col=0)
-    [m,n] = df.shape
-    feature = []
-    train_p = []
-    train_R = []
-    name_p = []
-    name_R = []
-    interaction_pair = {}
-    RNA_seq_dict = {}
-    protein_seq_dict = {}
-    protein_index = 0
-    RNA_index = 0
-    count = 0
-    with open(path + 'pro.fasta', 'r') as fp:
-        for line in fp:
-            if line[0] == '>':
-                name_p.append(line[1:-1])
-                count += 1
-            else:
-                seq = line[:-1]
-                protein_seq_dict[name_p[protein_index]] = seq
-                protein_index = protein_index + 1
-
-
-
-    with open(path + 'RNA.fasta', 'r') as fp:
-        for line in fp:
-            if line[0] == '>':
-                name_R.append(line[1:-1])
-            else:
-                seq = line[:-1]
-                RNA_seq_dict[name_R[RNA_index]] = seq
-                RNA_index = RNA_index + 1
-
-
-    feature = []
-    train = []
-    name = []
-    df=pd.read_csv(path + "label.csv",header=0,index_col=0)
-    [row,column] = np.where(df.values==1)
-    count1 = 0
-    count0 = 0
-    for i,j in zip(row,column):
-        RNA_tri_fea = rna_feature_extract(feature, RNA_seq_dict[df.index[i]],path)
-        protein_tri_fea = protein_feature_extract(feature, protein_seq_dict[df.columns[j]],path)
-        temp_f = list(RNA_tri_fea) + list(protein_tri_fea)
-        name.append(df.index[i]+'-'+df.columns[j])
-        feature.append(temp_f)
-        count1 += 1
-
-    row = []
-    col = []
-    [row0,column0] = np.where(df.values==0)   
-    rand = np.random.RandomState(seed)
-    num = rand.randint(row0.shape,size=count1)        
-    for i in num:
-        row.append(row0[i])
-        col.append(column0[i])
-    
-
-    for i,j in zip(row,col):
-        RNA_tri_fea = rna_feature_extract(feature, RNA_seq_dict[df.index[i]],path)
-        protein_tri_fea = protein_feature_extract(feature, protein_seq_dict[df.columns[j]],path)
-        temp_f = list(RNA_tri_fea) + list(protein_tri_fea)
-        name.append(df.index[i]+'-'+df.columns[j])
-        feature.append(temp_f)
-        count0 += 1
-
-    std = StandardScaler()
-    feature = std.fit_transform(feature)
-
-    for i in range(count1+count0):
-        if i < count1:
-            train.append(list(feature[i])+[1])
-        else:
-            train.append(list(feature[i])+[0])
-
-    return train
+    sse = SSEC(opts, model)
+    return np.append(sse, bpf)

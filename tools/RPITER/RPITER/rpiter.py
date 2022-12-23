@@ -372,14 +372,14 @@ if __name__ == '__main__':
         prog='RPITER',
         description='RPITER: A deep learning model for predicting RNA-protein interactions',
     )
-    parser.add_argument('-d', '--dataset', type=str, default='rpi2241', help='dataset name')
-    parser.add_argument('-m', '--model', type=str, default='rpi1807', help='model name')
+    parser.add_argument('-te', '--test', type=str, default='rpi2241', help='test dataset')
+    parser.add_argument('-tr', '--train', type=str, default='rpi2241', help='train dataset')
 
     args = parser.parse_args()
 
     opts = Options()
-    opts.DATASET = args.dataset
-    opts.MODEL = args.model
+    opts.DATASET = args.test
+    opts.MODEL = args.train
 
     opts.DATASET_BASE_PATH = os.path.join(opts.PARENT_DIR, 'data', opts.DATASET)
     opts.MODEL_BASE_PATH = os.path.join(opts.PARENT_DIR, 'data', opts.MODEL)
