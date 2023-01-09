@@ -256,6 +256,7 @@ def kfold_cross_validation(opts):
 
     # stratified k-fold cross validation
     metrics = np.zeros(6)
+    metrics_train = np.zeros(6)
     skf = StratifiedKFold(n_splits=opts.N_FOLDS, random_state=opts.RANDOM_STATE, shuffle=True)
     for _, (train_index, test_index) in enumerate(skf.split(np.zeros(len(y)), y)):
         X_train = [
@@ -277,13 +278,19 @@ def kfold_cross_validation(opts):
         y_val = to_categorical(y_val_mono, num_classes=2, dtype='int32')
 
         model_ensemble = build_model(X_train, y_train, opts)
+
         y_pred = model_ensemble.predict(X_val, verbose=0)
+        y_pred_train = model_ensemble.predict(X_train, verbose=0)
 
         metrics += np.array(calc_metrics(y_val[:, 1], y_pred[:, 1]))
+        metrics_train += np.array(calc_metrics(y_train[:, 1], y_pred_train[:, 1]))
 
     metrics /= opts.N_FOLDS
     acc, sn, sp, pre, mcc, auc = metrics
     print('>>Train:{} Test:{} (K-FOLD)\nacc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(opts.MODEL, opts.DATASET, acc, sn, sp, pre, mcc, auc), file=sys.stderr)
+    metrics_train /= opts.N_FOLDS
+    acc, sn, sp, pre, mcc, auc = metrics_train
+    print('>>>Train:{} Test:{} (K-FOLD)\nacc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(opts.MODEL, opts.DATASET, acc, sn, sp, pre, mcc, auc), file=sys.stderr)
 
 def train_and_validate_model(opts):
     p_encoder = ProEncoder(opts.P_WINDOW_UPLIMIT, opts.P_STRUCT_WINDOW_UPLIMIT, opts.CODING_FREQUENCY, opts.VECTOR_REPETITION_CNN)
@@ -319,15 +326,22 @@ def train_and_validate_model(opts):
 
     # train and test N_FOLDS times
     metrics = np.zeros(6)
+    metrics_train = np.zeros(6)
     for _ in range(opts.N_FOLDS):
         model_ensemble = build_model(X_train, y_train, opts)
+
         y_pred = model_ensemble.predict(X_val, verbose=0)
+        y_pred_train = model_ensemble.predict(X_train, verbose=0)
 
         metrics += np.array(calc_metrics(y_val[:, 1], y_pred[:, 1]))
+        metrics_train += np.array(calc_metrics(y_train[:, 1], y_pred_train[:, 1]))
 
     metrics /= opts.N_FOLDS
     acc, sn, sp, pre, mcc, auc = metrics
     print('>>Train:{} Test:{}\nacc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(opts.MODEL, opts.DATASET, acc, sn, sp, pre, mcc, auc), file=sys.stderr)
+    metrics_train /= opts.N_FOLDS
+    acc, sn, sp, pre, mcc, auc = metrics_train
+    print('>>>Train:{} Test:{}\nacc: {:.4f}, sn: {:.4f}, sp: {:.4f}, pre: {:.4f}, mcc: {:.4f}, auc: {:.4f}'.format(opts.MODEL, opts.DATASET, acc, sn, sp, pre, mcc, auc), file=sys.stderr)
 
 class Options:
     MODEL = None
@@ -335,7 +349,7 @@ class Options:
 
     DATASET_BASE_PATH = None
     MODEL_BASE_PATH = None
-    PARENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    PARENT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
     P_WINDOW_UPLIMIT = 3
     R_WINDOW_UPLIMIT = 4
